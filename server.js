@@ -34,6 +34,7 @@ http.createServer(function(request, response) {
 					response.end();
 				}
 				else {
+					response.setHeader('Access-Control-Allow-Origin', '*');
 					response.writeHead(200);
 					response.write(file, "binary");
 					console.log(" Success!");
