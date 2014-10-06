@@ -11,4 +11,4 @@ Just ensure that nodejs is installed!
 Starting
 ========
 - Run 'node server.js' from this directory. Server would start on port 8188.
-- 'node server.js <port>' for running in on a specific port.
+- 'node server.js <port>' for running on a specific port.
