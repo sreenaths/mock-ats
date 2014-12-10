@@ -13,10 +13,30 @@ var namespacesToQuery = [
       "ws/v1/timeline/TEZ_APPLICATION",
       "ws/v1/applicationhistory/apps"
     ],
+    formatters = {},
     downloadThreshold = 1024 * 1024 * parseInt(process.argv[3] || 5); // Default threshold 5 MB
 
+formatters["ws/v1/applicationhistory/apps"] = function (filePath, callback) {
+  fs.readFile(filePath, function(err, data) {
+    if(err) callback(err, data);
+    else {
+      data = JSON.parse(data);
+
+      data.entities = [];
+      data.app.forEach(function (app) {
+        app.entity = app.appId;
+        data.entities.push(app);
+      });
+
+      delete data.app;
+
+      fs.writeFile(filePath, JSON.stringify(data), {flag: 'w'}, callback);
+    }
+  });
+};
+
 function onError(error) {
-  console.error(err);
+  console.error(error);
   process.exit(1);
 }
 
@@ -36,18 +56,26 @@ function fetchData(fromURL, toPath, onComplete) {
 
 function getDump(timelineBaseURL) {
   var successfulDumpCount = 0;
+
+  function exitCheck() {
+    if(++successfulDumpCount >= namespacesToQuery.length) {
+      console.log('Downloaded all dump files.');
+      process.exit(0);
+    }
+  }
+
   namespacesToQuery.forEach(function (namespace) {
     var path = 'data/' + namespace;
 
     mkdirp(path, function (err) {
+      var toPath = path + '/index.json';
+
       if (err) onError(err);
-      else fetchData(timelineBaseURL + '/' + namespace, path + '/index.json', function () {
+      else fetchData(timelineBaseURL + '/' + namespace, toPath, function () {
         console.log('\nDumped : ' + path +'\n');
 
-        if(++successfulDumpCount >= namespacesToQuery.length) {
-          console.log('Downloaded all dump files.');
-          process.exit(0);
-        }
+        if(formatters[namespace]) formatters[namespace](toPath, exitCheck);
+        else exitCheck();
       });
     });
   });
