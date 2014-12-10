@@ -7,6 +7,9 @@ mock-ats
 ###Installation
 Just ensure nodejs is installed!
 
+###Get timelien data dump
+node get-ats-dump.js <timeline url>
+
 ###Starting
 - Run `node server.js` from this directory. Server would start on port *8188* by default.
 - `node server.js <port>` for running on a specific port.
