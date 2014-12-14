@@ -19,7 +19,7 @@ var http = require('http'),
   FILE_NOT_FOUND_ERR = "File Not Found",
   NOT_CACHED = "Data Not Cached";
 
-//Accepts JSON
+//Accepts JSON as data
 function setData(requestPath, data) {
   var parsedData = JSON.parse(data);
 
@@ -32,11 +32,35 @@ function setData(requestPath, data) {
   cache[requestPath] = parsedData;
 }
 
+function getFilters(query) {
+  var filters = [];
+
+  if(query.primaryFilter) filters = filters.concat(query.primaryFilter.split(','));
+  if(query.secondaryFilter) filters = filters.concat(query.secondaryFilter.split(','));
+
+  if(!filters.length) return null;
+
+  return filters.reduce(function (obj, val) {
+    var delimIndex = val.indexOf(":");
+    if(delimIndex > 0) obj[val.substr(0, delimIndex)] = val.substr(delimIndex + 1);
+    return obj;
+  }, {});
+}
+
+function filterCheck(entity, filters) {
+  for(var filterName in filters){
+    if(!entity.primaryfilters[filterName]) return false;
+    if(entity.primaryfilters[filterName].indexOf(filters[filterName]) == -1) return false;
+  }
+  return true;
+}
+
 //Returns JSON/null
 function getData(requestPath, query) {
   var data = cache[requestPath],
       returnData,
-      startIndex = 0;
+      startIndex = 0,
+      filters;
 
   if(!data) return null; // No data
   if(!query.limit) returnData = query.fromId ? data[query.fromId] : data;
@@ -48,8 +72,21 @@ function getData(requestPath, query) {
       if(startIndex == -1) return null; // Entity not found in the adday
     }
 
+    filters = getFilters(query);
+    if(filters) { // Filter
+      returnData = [],
+      data = data.entities;
+
+      for(var i = startIndex, length = data.length; i < length && returnData.length < query.limit; i++) {
+        if(filterCheck(data[i], filters)) returnData.push(data[i]);
+      }
+    }
+    else {
+      returnData = data.entities.slice(startIndex, startIndex + query.limit);
+    }
+
     returnData = {
-      entities: data.entities.slice(startIndex, startIndex + query.limit)
+      entities: returnData
     };
   }
 
