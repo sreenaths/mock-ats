@@ -1,6 +1,6 @@
 mock-ats
 ========
-Provides a mock timeline server for testing and development. Fixture data can be pulled directly from timeline server using get-ats-dump script. They can also be added manually into the data folder.  
+Provides a mock timeline server for testing and development. Fixture data can be pulled directly from timeline server using get-ats-dump script. They can also be added manually into the data directory.  
 Supports: fromId, limit, primaryFilter, secondaryFilter
 
 ###Installation
