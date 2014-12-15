@@ -91,5 +91,5 @@ if (process.argv.length > 2) {
   process.stdin.once("data", function (data) {
     getDump(process.argv[2]);
   });
-} else onError("Timeline server url must be passed on command line.");
+} else onError("Timeline server url must be passed as first command line argument.");
 
