@@ -16,14 +16,18 @@ var http = require('http'),
   
   ERROR_RESPONSE = '{"exception":"NotFoundException","message":"java.lang.Exception: Timeline entity { id: dag_1415292900390_0001_11.hh, type: TEZ_DAG_ID } is not found","javaClassName":"org.apache.hadoop.yarn.webapp.NotFoundException"}',
   ENTITIES_SNIPPET = '{"entities"',
-  FILE_NOT_FOUND_ERR = "File Not Found",
-  NOT_CACHED = "Data Not Cached";
+  FILE_NOT_FOUND_ERR = "File/Data Not Found!",
+  NOT_CACHED = "Data Not Found/Caching Error!";
 
 //Accepts JSON as data
 function setData(requestPath, data) {
   var parsedData = JSON.parse(data);
 
   if(parsedData.entities) {
+    parsedData.entities.sort(function (a, b) { // Sorts data in descending order of startTime
+      if(!a.otherinfo || !b.otherinfo) return 0;
+      return b.otherinfo.startTime - a.otherinfo.startTime;
+    });
     parsedData.entities.forEach(function (entity) { // Hash all entities for easy access, just a ref no much extra memory use.
       parsedData[entity.entity] = entity;
     });
@@ -48,9 +52,11 @@ function getFilters(query) {
 }
 
 function filterCheck(entity, filters) {
+  var filterValues;
   for(var filterName in filters){
-    if(!entity.primaryfilters[filterName]) return false;
-    if(entity.primaryfilters[filterName].indexOf(filters[filterName]) == -1) return false;
+    filterValues = entity.primaryfilters && entity.primaryfilters[filterName];
+    if(!filterValues) return false;
+    if(filterValues.indexOf(filters[filterName]) == -1) return false;
   }
   return true;
 }
