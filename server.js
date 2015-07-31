@@ -14,7 +14,6 @@ var http = require('http'),
   mkdirp = require('mkdirp'),
 
   cache = {},
-  uiDomain = process.argv[2] || 'http://localhost:9001',
   port = parseInt(process.argv[3], 10) || 8188,
   
   ERROR_RESPONSE = '{"exception":"NotFoundException","message":"java.lang.Exception: Timeline entity { type: TEZ_DAG_ID } is not found","javaClassName":"org.apache.hadoop.yarn.webapp.NotFoundException"}',
@@ -301,8 +300,6 @@ http.createServer(function(request, response) {
     console.log(
         "Timeline Server running at http://localhost:" +
         port +
-        "/ expecting requests from " +
-        uiDomain +
         "\nUse CTRL+C to shutdown");
   }
 });
