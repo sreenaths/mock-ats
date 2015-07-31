@@ -11,6 +11,7 @@ var http = require('http'),
   qs = require('querystring'),
   formidable = require('formidable'),
   unzip = require('unzip2'),
+  mkdirp = require('mkdirp'),
 
   cache = {},
   uiDomain = process.argv[2] || 'http://localhost:9001',
@@ -159,10 +160,13 @@ function extractFiles(zipFiles, callback) {
   },
   completeCount = 0;
 
-  if(!Array.isArray()) zipFiles.upload = [zipFiles.upload];
+  if(!zipFiles.upload) throw new Error();
+  if(!Array.isArray(zipFiles.upload)) zipFiles.upload = [zipFiles.upload];
 
   zipFiles.upload.forEach(function (file){
     var unzipDir = file.path + "_dir/";
+
+    console.log(">>", file.path);
 
     fs.createReadStream(file.path).
     pipe(unzip.Extract({ path: unzipDir }).
@@ -185,8 +189,10 @@ function extractFiles(zipFiles, callback) {
   });
 }
 
-function appendJSONEntities(file, data) {
-  var json = {entities: []};
+function appendJSONEntities(path, data) {
+  var json = {entities: []},
+      file = path + '/index.json';
+
   try {
     json = JSON.parse(fs.readFileSync(file, 'utf8'));
   }
@@ -194,17 +200,19 @@ function appendJSONEntities(file, data) {
 
   json.entities = json.entities.concat(data);
 
-  fs.writeFile(file, JSON.stringify(json));
+  mkdirp(path, function (err) {
+    fs.writeFile(file, JSON.stringify(json), {flags: 'r+'});
+  });
 }
 
 function saveData(data) {
   console.log(data);
-  appendJSONEntities('data/ws/v1/timeline/TEZ_DAG_ID/index.json', data.dags);
-  appendJSONEntities('data/ws/v1/timeline/TEZ_APPLICATION/index.json', data.applications);
+  appendJSONEntities('data/ws/v1/timeline/TEZ_DAG_ID', data.dags);
+  appendJSONEntities('data/ws/v1/timeline/TEZ_APPLICATION', data.applications);
 
-  appendJSONEntities('data/ws/v1/timeline/TEZ_VERTEX_ID/index.json', data.vertices);
-  appendJSONEntities('data/ws/v1/timeline/TEZ_TASK_ID/index.json', data.tasks);
-  appendJSONEntities('data/ws/v1/timeline/TEZ_TASK_ATTEMPT_ID/index.json', data.task_attempts);
+  appendJSONEntities('data/ws/v1/timeline/TEZ_VERTEX_ID', data.vertices);
+  appendJSONEntities('data/ws/v1/timeline/TEZ_TASK_ID', data.tasks);
+  appendJSONEntities('data/ws/v1/timeline/TEZ_TASK_ATTEMPT_ID', data.task_attempts);
 }
 
 function sendResponse(response, statusMsg) {
@@ -237,10 +245,10 @@ function uploader(request, response) {
           sendResponse(response, "save failed!");
         }
       });
-    }
-    catch(e) {
-      sendResponse(response, "extraction failed!");
-    }
+     }
+     catch(e) {
+       sendResponse(response, "extraction failed!");
+     }
   });
 }
 
