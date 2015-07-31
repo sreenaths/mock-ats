@@ -166,8 +166,6 @@ function extractFiles(zipFiles, callback) {
   zipFiles.upload.forEach(function (file){
     var unzipDir = file.path + "_dir/";
 
-    console.log(">>", file.path);
-
     fs.createReadStream(file.path).
     pipe(unzip.Extract({ path: unzipDir }).
       on('close', function() {
@@ -206,7 +204,6 @@ function appendJSONEntities(path, data) {
 }
 
 function saveData(data) {
-  console.log(data);
   appendJSONEntities('data/ws/v1/timeline/TEZ_DAG_ID', data.dags);
   appendJSONEntities('data/ws/v1/timeline/TEZ_APPLICATION', data.applications);
 
@@ -230,8 +227,6 @@ function uploader(request, response) {
   form.multiples = true;
 
   form.parse(request, function(err, fields, files) {
-    console.log(files);
-
     if(err) sendResponse(response, "upload failed!");
 
     try {
