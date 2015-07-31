@@ -226,7 +226,7 @@ function uploader(request, response) {
 
     if(err) sendResponse(response, "upload failed!");
 
-//    try {
+    try {
       extractFiles(files, function (data) {
         try {
           saveData(data);
@@ -237,10 +237,10 @@ function uploader(request, response) {
           sendResponse(response, "save failed!");
         }
       });
-    // }
-    // catch(e) {
-    //   sendResponse(response, "extraction failed!");
-    // }
+    }
+    catch(e) {
+      sendResponse(response, "extraction failed!");
+    }
   });
 }
 
