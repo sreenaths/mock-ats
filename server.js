@@ -1,26 +1,26 @@
 "use strict"
 
 /*
-	A mock Timeline Server
+  A mock Timeline Server
 */
 
 var http = require('http'),
-	url = require('url'),
-	path = require('path'),
-	fs = require('fs'),
+  url = require('url'),
+  path = require('path'),
+  fs = require('fs'),
   qs = require('querystring'),
 
   cache = {},
   uiDomain = process.argv[2] || 'http://localhost:9001',
-	port = parseInt(process.argv[3], 10) || 8188,
+  port = parseInt(process.argv[3], 10) || 8188,
   
-  ERROR_RESPONSE = '{"exception":"NotFoundException","message":"java.lang.Exception: Timeline entity { id: dag_1415292900390_0001_11.hh, type: TEZ_DAG_ID } is not found","javaClassName":"org.apache.hadoop.yarn.webapp.NotFoundException"}',
+  ERROR_RESPONSE = '{"exception":"NotFoundException","message":"java.lang.Exception: Timeline entity { type: TEZ_DAG_ID } is not found","javaClassName":"org.apache.hadoop.yarn.webapp.NotFoundException"}',
   ENTITIES_SNIPPET = '{"entities"',
   FILE_NOT_FOUND_ERR = "File/Data Not Found!",
   NOT_CACHED = "Data Not Found/Caching Error!";
 
 //Accepts JSON as data
-function setData(requestPath, data) {
+function setCacheData(requestPath, data) {
   var parsedData = JSON.parse(data);
 
   if(parsedData.entities) {
@@ -62,39 +62,38 @@ function filterCheck(entity, filters) {
 }
 
 //Returns JSON/null
-function getData(requestPath, query) {
+function getCacheData(requestPath, query) {
   var data = cache[requestPath],
       returnData,
       startIndex = 0,
       filters;
 
-  if(!data) return null; // No data
-  if(!query.limit) returnData = query.fromId ? data[query.fromId] : data;
-  else {
-    if(!data.entities) return null; //No entities array, hence cannot return limit number of entities
+  if(!data || !data.entities) return null; // No data || No entities array, hence cannot return limit number of entities
 
-    if(data[query.fromId]) { // No entity id/from id specified, so startIndex = 0
-      startIndex = data.entities.indexOf(data[query.fromId]);
-      if(startIndex == -1) return null; // Entity not found in the adday
-    }
+  if(query.id) return JSON.stringify(data[query.id]) || null;
 
-    filters = getFilters(query);
-    if(filters) { // Filter
-      returnData = [],
-      data = data.entities;
-
-      for(var i = startIndex, length = data.length; i < length && returnData.length < query.limit; i++) {
-        if(filterCheck(data[i], filters)) returnData.push(data[i]);
-      }
-    }
-    else {
-      returnData = data.entities.slice(startIndex, startIndex + query.limit);
-    }
-
-    returnData = {
-      entities: returnData
-    };
+  if(data[query.fromId]) {
+    startIndex = data.entities.indexOf(data[query.fromId]);
+    if(startIndex == -1) return null; // Entity not found in the array
   }
+  // else, No entity id/from id specified, so startIndex = 0
+
+  filters = getFilters(query);
+  if(filters) { // Filter
+    returnData = [],
+    data = data.entities;
+
+    for(var i = startIndex, length = data.length; i < length && returnData.length < query.limit; i++) {
+      if(filterCheck(data[i], filters)) returnData.push(data[i]);
+    }
+  }
+  else {
+    returnData = data.entities.slice(startIndex, startIndex + query.limit);
+  }
+
+  returnData = {
+    entities: returnData
+  };
 
   return JSON.stringify(returnData);
 }
@@ -110,19 +109,19 @@ function readFile(filePath, callback) {
 }
 
 function readData(requestPath, query, callback) {
-  var data = getData(requestPath, query);
+  var data = getCacheData(requestPath, query);
 
   if(data) callback(null, data);
   else readFile(requestPath, function (err, data) {
     if(!err) {
-      setData(requestPath, data);
+      setCacheData(requestPath, data);
 
-      data = getData(requestPath, query);
+      data = getCacheData(requestPath, query);
       if(data) callback(null, data);
       else callback(NOT_CACHED);
     }
     else if(!query.fromId && err == FILE_NOT_FOUND_ERR) { // Go one level deeper, to fetch entities from inside the index files
-      query.fromId = path.basename(requestPath); // Use base name as the entity id
+      query.id = path.basename(requestPath); // Use base name as the entity id
       readData(path.dirname(requestPath), query, callback);
     }
     else callback(err, data);
@@ -134,7 +133,7 @@ http.createServer(function(request, response) {
       requestPath = path.join(process.cwd(), 'data/', parsedUrl.pathname),
       query = qs.parse(parsedUrl.query);
 
-  query.limit = parseInt(query.limit) || 0;
+  query.limit = parseInt(query.limit) || 100;
 
   readData(requestPath, query, function (err, data) {
     var status, log;
@@ -142,26 +141,34 @@ http.createServer(function(request, response) {
     if(err) status = 404, data = ERROR_RESPONSE, log = "Err:" + err;
     else status = 200, log = "Success!";
 
-    response.setHeader('Access-Control-Allow-Credentials', true);
-    response.setHeader('Access-Control-Allow-Origin', uiDomain);
+    response.writeHead(status, {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Credentials': true,
+      'Access-Control-Allow-Headers': 'X-Requested-With,Content-Type,Accept,Origin',
+      'Access-Control-Allow-Methods': 'GET,POST,HEAD',
+      'Access-Control-Allow-Origin': request.headers.origin,
+      'Access-Control-Max-Age': 1800,
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Transfer-Encoding': 'chunked'
+    });
 
-    response.writeHead(status, {'Content-Type': 'application/json'});
     response.write(data);
     console.log("Rquested for " + requestPath + " : " + log);
     response.end();
   });
 
 }).listen(port, function(err){
-	if(err) {
-		console.log("Unable to listen : ", err);
-	}
-	else {
-		console.log(
+  if(err) {
+    console.log("Unable to listen : ", err);
+  }
+  else {
+    console.log(
         "Timeline Server running at http://localhost:" +
         port +
         "/ expecting requests from " +
         uiDomain +
         "\nUse CTRL+C to shutdown");
-	}
+  }
 });
 
