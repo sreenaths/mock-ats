@@ -1,6 +1,7 @@
 "use strict"
 
 /*
+  proxy.js
   A simple proxy implementation in Nodejs
   - Quick-fix for CORS
   - By default the proxy starts on port 8088
@@ -12,25 +13,14 @@
   forever proxy.js target_url [listening_port]
 */
 
-var httpProxy = require('http-proxy'),
+var args = process.argv.splice(2),
+    target = args[0],
+    port = parseInt(args[1], 10) || 8188,
 
-    target = process.argv[2],
-    port = parseInt(process.argv[3], 10) || 8188,
-
-    proxy;
-
-function onProxyReq(proxyReq, req, res) {
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '');
-  res.setHeader('Access-Control-Allow-Credentials', true);
-}
+    proxy = require('./lib/proxy');
 
 if(target) {
-  proxy = httpProxy.createProxyServer({
-    target: target
-  });
-  proxy.on('proxyReq', onProxyReq);
-  proxy.listen(port);
-
+  proxy(target, port);
   console.log("Proxy started on port " + port + " targeting " + target);
 }
 else {
