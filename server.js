@@ -277,6 +277,29 @@ function webService(request, response) {
   });
 }
 
+function serveFile(requestPath, response) {
+  
+  console.log("Reading " + requestPath);
+  readFile(requestPath, function (err, data) {
+    var status, log;
+
+    if(err) status = 404, data = ERROR_RESPONSE, log = "Err:" + err;
+    else status = 200, log = "Success!";
+
+    response.writeHead(status, {
+      'Access-Control-Allow-Credentials': true,
+      'Access-Control-Allow-Headers': 'X-Requested-With,Content-Type,Accept,Origin',
+      'Access-Control-Allow-Methods': 'GET,POST,HEAD',
+      'Access-Control-Max-Age': 1800,
+      'Transfer-Encoding': 'chunked'
+    });
+
+    response.write(data);
+    console.log("Requested for " + requestPath + " : " + log);
+    response.end();
+  });
+}
+
 http.createServer(function(request, response) {
   var pathname = url.parse(request.url, true).pathname;
 
@@ -287,6 +310,10 @@ http.createServer(function(request, response) {
 
     case /\/uploader/.test(pathname):
       uploader(request, response);
+      break;
+
+    case /\/ui/.test(pathname):
+      serveFile(path.join(process.cwd(), 'data/', pathname), response)
       break;
 
     default:
