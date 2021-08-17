@@ -10,7 +10,7 @@ var http = require('http'),
   fs = require('fs'),
   qs = require('querystring'),
   formidable = require('formidable'),
-  unzip = require('unzip2'),
+  unzip = require('node-unzip-2'),
   mkdirp = require('mkdirp'),
 
   cache = {},
@@ -198,7 +198,9 @@ function appendJSONEntities(path, data) {
   json.entities = json.entities.concat(data);
 
   mkdirp(path, function (err) {
-    fs.writeFile(file, JSON.stringify(json), {flags: 'r+'});
+    fs.writeFile(file, JSON.stringify(json), {flags: 'r+'}, function(err, result) {
+      if(err) console.log('error', err);
+    });
   });
 }
 
