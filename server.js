@@ -48,7 +48,7 @@ function getFilters(query) {
 
   return filters.reduce(function (obj, val) {
     var delimIndex = val.indexOf(":");
-    if(delimIndex > 0) obj[val.substr(0, delimIndex)] = val.substr(delimIndex + 1);
+    if(delimIndex > 0) obj[val.substr(0, delimIndex)] = JSON.parse(val.substr(delimIndex + 1));
     return obj;
   }, {});
 }
@@ -143,7 +143,7 @@ function dagUpload(request, response) {
 function extractData(dest, src) {
   if(src.application) dest.applications.push(src.application);
   if(src.dag) dest.dags.push(src.dag);
-
+  if(src['dag-extra-info']) dest.dag_extra_infos.push(src['dag-extra-info']);
   if(src.vertices) dest.vertices = dest.vertices.concat(src.vertices);
   if(src.tasks) dest.tasks = dest.tasks.concat(src.tasks);
   if(src.task_attempts) dest.task_attempts = dest.task_attempts.concat(src.task_attempts);
@@ -153,6 +153,7 @@ function extractFiles(zipFiles, callback) {
   var data = {
     applications: [],
     dags: [],
+    dag_extra_infos: [],
     vertices: [],
     tasks: [],
     task_attempts: []
@@ -198,8 +199,8 @@ function appendJSONEntities(path, data) {
   json.entities = json.entities.concat(data);
 
   mkdirp(path, function (err) {
-    fs.writeFile(file, JSON.stringify(json), {flags: 'r+'}, function(err, result) {
-      if(err) console.log('error', err);
+    fs.writeFile(file, JSON.stringify(json), {flags: 'r+'}, function(err) {
+      if (err) throw err;
     });
   });
 }
@@ -207,7 +208,7 @@ function appendJSONEntities(path, data) {
 function saveData(data) {
   appendJSONEntities('data/ws/v1/timeline/TEZ_DAG_ID', data.dags);
   appendJSONEntities('data/ws/v1/timeline/TEZ_APPLICATION', data.applications);
-
+  appendJSONEntities('data/ws/v1/timeline/TEZ_DAG_EXTRA_INFO', data.dag_extra_infos);
   appendJSONEntities('data/ws/v1/timeline/TEZ_VERTEX_ID', data.vertices);
   appendJSONEntities('data/ws/v1/timeline/TEZ_TASK_ID', data.tasks);
   appendJSONEntities('data/ws/v1/timeline/TEZ_TASK_ATTEMPT_ID', data.task_attempts);
@@ -266,7 +267,7 @@ function webService(request, response) {
       'Access-Control-Allow-Credentials': true,
       'Access-Control-Allow-Headers': 'X-Requested-With,Content-Type,Accept,Origin',
       'Access-Control-Allow-Methods': 'GET,POST,HEAD',
-      'Access-Control-Allow-Origin': request.headers.origin,
+      'Access-Control-Allow-Origin': request.headers.origin || "*",
       'Access-Control-Max-Age': 1800,
       'Cache-Control': 'no-cache',
       'Pragma': 'no-cache',
