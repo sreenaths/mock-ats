@@ -10,7 +10,7 @@ var http = require('http'),
   fs = require('fs'),
   qs = require('querystring'),
   formidable = require('formidable'),
-  unzip = require('unzip2'),
+  unzip = require('node-unzip-2'),
   mkdirp = require('mkdirp'),
 
   cache = {},
