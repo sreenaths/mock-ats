@@ -10,8 +10,9 @@ var http = require('http'),
   fs = require('fs'),
   qs = require('querystring'),
   formidable = require('formidable'),
-  unzip = require('node-unzip-2'),
   mkdirp = require('mkdirp'),
+  StreamZip = require('node-stream-zip'),
+
 
   cache = {},
   port = parseInt(process.argv[3], 10) || 8188,
@@ -163,27 +164,24 @@ function extractFiles(zipFiles, callback) {
   if(!zipFiles.upload) throw new Error();
   if(!Array.isArray(zipFiles.upload)) zipFiles.upload = [zipFiles.upload];
 
-  zipFiles.upload.forEach(function (file){
-    var unzipDir = file.path + "_dir/";
+  
+  zipFiles.upload.forEach(function (file) {
+    const zip = new StreamZip({ file: file.path });
 
-    fs.createReadStream(file.path).
-    pipe(unzip.Extract({ path: unzipDir }).
-      on('close', function() {
-        fs.readdir(unzipDir, function(err, files){
-          if (err) throw err;
-          files.forEach(function(file){
-              var json = JSON.parse(fs.readFileSync(unzipDir + file, 'utf8'));
-              extractData(data, json);
-          });
+    // Handle errors
+    zip.on('error', err => { throw err });
+    zip.on('entry', entry => {
+      const json = JSON.parse(zip.entryDataSync(entry));
+      extractData(data, json);
+    });
+    zip.on('ready', () => {
+      zip.close();
 
-          completeCount++;
-
-          if(completeCount == zipFiles.upload.length) {
-            callback(data);
-          }
-        });
-      })
-    );
+      completeCount++;
+      if(completeCount == zipFiles.upload.length) {
+        callback(data);
+      }
+    });
   });
 }
 
